@@ -1,2 +1,5 @@
-FortiGate-VM64-KVM >
-FortiGate-VM64-KVM #
+login: admin
+password: aucun
+
+en  
+conf t
