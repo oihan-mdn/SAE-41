@@ -1,0 +1,5 @@
+login: admin
+password: never
+
+en
+conf t
