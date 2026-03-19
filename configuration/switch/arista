@@ -1,5 +1,5 @@
 login: admin
-password: never
+password:
 
 enable
 configure terminal
