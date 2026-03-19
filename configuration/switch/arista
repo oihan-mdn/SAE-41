@@ -1,5 +1,86 @@
 login: admin
 password: never
 
-en
-conf t
+enable
+configure terminal
+
+! --- VRF ET ROUTAGE ---
+vrf instance VRF_ORDINATEURS
+vrf instance VRF_SERVEURS
+
+ip routing
+ip routing vrf VRF_ORDINATEURS
+ip routing vrf VRF_SERVEURS
+
+! --- CREATION DES VLANS ---
+vlan 10
+   name ORDINATEURS
+vlan 20
+   name SERVEURS
+vlan 101
+   name TRANSIT_ORDIS
+vlan 102
+   name TRANSIT_SERVEURS
+
+! --- PASSERELLES LOCALES ---
+interface Vlan10
+   vrf VRF_ORDINATEURS
+   ip address 192.168.126.1/25
+   no shutdown
+
+interface Vlan20
+   vrf VRF_SERVEURS
+   ip address 192.168.126.129/26
+   no shutdown
+
+! --- PASSERELLES DE TRANSIT VERS FORTINET ---
+interface Vlan101
+   vrf VRF_ORDINATEURS
+   ip address 192.168.127.1/30
+   no shutdown
+
+interface Vlan102
+   vrf VRF_SERVEURS
+   ip address 192.168.127.5/30
+   no shutdown
+
+! --- PORTS PHYSIQUES ---
+interface Ethernet3
+   description TRUNK_VERS_FORTINET
+   switchport mode trunk
+   switchport trunk allowed vlan 101-102
+   no shutdown
+
+interface Ethernet2
+   description VERS_SERVEURS_VLAN20
+   switchport mode access
+   switchport access vlan 20
+   no shutdown
+
+interface Ethernet1
+   description VERS_ORDINATEURS_VLAN10
+   switchport mode access
+   switchport access vlan 10
+   no shutdown
+
+! --- SERVEUR DHCP (VLAN 10) ---
+dhcp server
+   vrf VRF_ORDINATEURS
+      subnet 192.168.126.0/25
+         default-gateway 192.168.126.1
+         dns server 8.8.8.8
+         range 192.168.126.11 192.168.126.126
+
+! --- ROUTAGE OSPF ---
+router ospf 1 vrf VRF_ORDINATEURS
+   router-id 192.168.127.17
+   network 192.168.126.0/25 area 0.0.0.0
+   network 192.168.127.0/30 area 0.0.0.0
+
+router ospf 2 vrf VRF_SERVEURS
+   router-id 192.168.127.17
+   network 192.168.126.128/26 area 0.0.0.0
+   network 192.168.127.4/30 area 0.0.0.0
+
+write memory
+
