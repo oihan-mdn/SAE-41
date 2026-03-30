@@ -1,10 +1,10 @@
-login: admin
-password:
+Désactivation du mode ZeroTouch (à taper en premier si le switch est vierge)
+zerotouch disable
 
 enable
 configure terminal
 
-! --- VRF ET ROUTAGE ---
+! --- 1. VRF ET ROUTAGE GLOBAL ---
 vrf instance VRF_ORDINATEURS
 vrf instance VRF_SERVEURS
 
@@ -12,7 +12,7 @@ ip routing
 ip routing vrf VRF_ORDINATEURS
 ip routing vrf VRF_SERVEURS
 
-! --- CREATION DES VLANS ---
+! --- 2. CREATION DES VLANS ---
 vlan 10
    name ORDINATEURS
 vlan 20
@@ -22,65 +22,72 @@ vlan 101
 vlan 102
    name TRANSIT_SERVEURS
 
-! --- PASSERELLES LOCALES ---
-interface Vlan10
-   vrf VRF_ORDINATEURS
-   ip address 192.168.126.1/25
-   no shutdown
-
-interface Vlan20
-   vrf VRF_SERVEURS
-   ip address 192.168.126.129/26
-   no shutdown
-
-! --- PASSERELLES DE TRANSIT VERS FORTINET ---
-interface Vlan101
-   vrf VRF_ORDINATEURS
-   ip address 192.168.127.1/30
-   no shutdown
-
-interface Vlan102
-   vrf VRF_SERVEURS
-   ip address 192.168.127.5/30
-   no shutdown
-
-! --- PORTS PHYSIQUES ---
+! --- 3. PORTS PHYSIQUES (ACCESS & TRUNK) ---
 interface Ethernet3
    description TRUNK_VERS_FORTINET
    switchport mode trunk
    switchport trunk allowed vlan 101-102
    no shutdown
 
-interface Ethernet2
-   description VERS_SERVEURS_VLAN20
-   switchport mode access
-   switchport access vlan 20
-   no shutdown
-
 interface Ethernet1
    description VERS_ORDINATEURS_VLAN10
    switchport mode access
    switchport access vlan 10
+   spanning-tree portfast
    no shutdown
 
-! --- SERVEUR DHCP (VLAN 10) ---
-dhcp server
-   vrf VRF_ORDINATEURS
-      subnet 192.168.126.0/25
-         default-gateway 192.168.126.1
-         dns server 8.8.8.8
-         range 192.168.126.11 192.168.126.126
+interface Ethernet2
+   description VERS_SERVEURS_VLAN20
+   switchport mode access
+   switchport access vlan 20
+   spanning-tree portfast
+   no shutdown
 
-! --- ROUTAGE OSPF ---
+! --- 4. PASSERELLES LOCALES ET RELAIS DHCP ---
+interface Vlan10
+   description PASSERELLE_ORDINATEURS
+   vrf VRF_ORDINATEURS
+   ip address 192.168.126.1/25
+   ! Relais vers le Docker DHCP situé dans le VLAN 20
+   ip helper-address 192.168.126.130
+   no shutdown
+
+interface Vlan20
+   description PASSERELLE_SERVEURS
+   vrf VRF_SERVEURS
+   ip address 192.168.126.129/26
+   no shutdown
+
+! --- 5. PASSERELLES DE TRANSIT (VERS LE PARE-FEU) ---
+interface Vlan101
+   description LIEN_OSPF_ORDINATEURS
+   vrf VRF_ORDINATEURS
+   ip address 192.168.127.1/30
+   no shutdown
+
+interface Vlan102
+   description LIEN_OSPF_SERVEURS
+   vrf VRF_SERVEURS
+   ip address 192.168.127.5/30
+   no shutdown
+
+! --- 6. ROUTAGE OSPF (VERS LE FORTIGATE) ---
 router ospf 1 vrf VRF_ORDINATEURS
-   router-id 192.168.127.17
+   router-id 1.1.1.1
    network 192.168.126.0/25 area 0.0.0.0
    network 192.168.127.0/30 area 0.0.0.0
 
 router ospf 2 vrf VRF_SERVEURS
-   router-id 192.168.127.17
+   router-id 2.2.2.2
    network 192.168.126.128/26 area 0.0.0.0
    network 192.168.127.4/30 area 0.0.0.0
 
+! --- 7. ROUTES STATIQUES (SÉCURITÉ / BACKUP) ---
+! Si l'OSPF lâche, le switch saura toujours envoyer le trafic au FortiGate
+ip route vrf VRF_ORDINATEURS 0.0.0.0/0 192.168.127.2
+ip route vrf VRF_SERVEURS 0.0.0.0/0 192.168.127.6
+
+exit
 write memory
+
 
