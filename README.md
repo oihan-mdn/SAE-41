@@ -36,7 +36,7 @@ L'évaluation finale repose sur plusieurs éléments déposés sur la plateforme
 1.  **Badge et QCM CEH**.
 2.  **Fiche de Synthèse** technique.
 3.  **Compte Rendu d'Architecture** du Système d'Information.
-4.  **Soutenance Orale** (sous réserve de confirmation).
+4.  **Soutenance Orale**.
 
 ---
 *Projet encadré par : CBAR, CLAB, NBER, AFAR.*
