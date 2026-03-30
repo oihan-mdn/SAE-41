@@ -1,0 +1,26 @@
+# 1. Configuration IP (Passerelle : L'Arista dans le VLAN 20)
+ifconfig eth0 192.168.126.130 netmask 255.255.255.192 up
+route add default gw 192.168.126.129
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
+
+# 2. Installation du service DHCP
+apt-get update
+apt-get install isc-dhcp-server -y
+
+# 3. Création du fichier de configuration DHCP
+cat <<EOF > /etc/dhcp/dhcpd.conf
+# Il faut declarer le reseau local du serveur (VLAN 20) pour que le service accepte de demarrer
+subnet 192.168.126.128 netmask 255.255.255.192 {
+}
+
+# La plage distribuee pour le VLAN 10 (Ordis) via le relais de l'Arista
+subnet 192.168.126.0 netmask 255.255.255.128 {
+    range 192.168.126.11 192.168.126.126;
+    option routers 192.168.126.1;
+    option domain-name-servers 8.8.8.8;
+}
+EOF
+
+# 4. Démarrage du serveur DHCP
+service isc-dhcp-server restart
+service isc-dhcp-server status
