@@ -17,7 +17,7 @@ Dans le cadre de cette SAÉ, nous préparons la **Certification Ethical Hacker (
 
 ### 🔹 Infrastructure Locale & WAN (AFAR)
 Mise en œuvre d'une architecture multi-constructeurs sur **PnetLab**:
-* **Équipements :** Fortinet, Juniper, Arista et Cisco.
+* **Équipements :** Fortinet et Arista.
 * **Configuration :** Paramétrage de terminaux Arista et Firewall Fortigate.
 * **Interconnexion :** Déploiement de tunnels **IPSEC-ADVPN** et gestion via **SD-WAN**.
 * **Filtrage :** Sécurisation des flux aux couches 3 et 4.
