@@ -1,5 +1,208 @@
 login: admin
 password: aucun
 
-en  
-conf t
+config system interface
+    edit "port3"
+        set vdom "root"
+        set mode static
+        # /!\ Je remets l'IP .200 que tu avais au début. 
+        # Si le prof t'a donné une autre IP en 100.X, modifie-la ici !
+        set ip 192.168.100.200 255.255.255.0
+        set allowaccess ping https ssh http
+        set type physical
+        set role wan
+        set alias "INTERNET_MANAGEMENT"
+    next
+    edit "port5"
+        set vdom "root"
+        set mode static
+        set ip 192.168.200.6 255.255.255.0
+        set allowaccess ping
+        set type physical
+        set role wan
+        set alias "RESEAU_VPN_ETUDIANTS"
+    next
+    edit "port4"
+        set vdom "root"
+        set ip 192.168.126.225 255.255.255.240
+        set allowaccess ping
+        set role dmz
+        set alias "INTERFACE_DMZ"
+    next
+    edit "VLAN101_ORDIS"
+        set vdom "root"
+        set ip 192.168.127.2 255.255.255.252
+        set allowaccess ping
+        set interface "port2"
+        set vlanid 101
+    next
+    edit "VLAN102_SRV"
+        set vdom "root"
+        set ip 192.168.127.6 255.255.255.252
+        set allowaccess ping
+        set interface "port2"
+        set vlanid 102
+    next
+end
+
+# 1.bis LES ROUTES STATIQUES (INTERNET + VPN)
+config router static
+    # Route par défaut vers Internet (via le port 3)
+    edit 1
+        set gateway 192.168.100.254
+        set device "port3"
+    next
+    # Route pour envoyer le trafic BGP dans le tunnel VPN
+    edit 2
+        set dst 10.0.0.0 255.255.255.0
+        set device "VPN_VERS_HUB"
+    next
+end
+
+# 2. ROUTAGE DYNAMIQUE (OSPF)
+config router ospf
+    set router-id 192.168.127.18
+    set default-information-originate enable
+    config area
+        edit 0.0.0.0
+        next
+    end
+    config network
+        edit 1
+            set prefix 192.168.127.0 255.255.255.252
+        next
+        edit 2
+            set prefix 192.168.127.4 255.255.255.252
+        next
+    end
+end
+
+# 3. PORT FORWARDING (VIP) APACHE
+config firewall vip
+    edit "VIP_APACHE_DMZ"
+        set extintf "port3"
+        # On remet ton IP statique ici
+        set extip 192.168.100.200
+        set mappedip 192.168.126.226
+        set portforward enable
+        set extport 80
+        set mappedport 80
+    next
+end
+
+# 4. TUNNEL IPSEC ADVPN (SUR LE PORT 5)
+config vpn ipsec phase1-interface
+    edit "VPN_VERS_HUB"
+        set interface "port5"
+        set ike-version 2
+        set peertype any
+        set net-device disable
+        set proposal des-sha1
+        set dhgrp 14
+        set auto-discovery-receiver enable
+        set remote-gw 192.168.200.11
+        set psksecret "IUTBlagnac33"
+    next
+end
+
+config vpn ipsec phase2-interface
+    edit "VPN_VERS_HUB"
+        set phase1name "VPN_VERS_HUB"
+        set proposal des-sha1
+        set dhgrp 14
+    next
+end
+
+config system interface
+    edit "VPN_VERS_HUB"
+        set vdom "root"
+        set ip 10.0.0.6 255.255.255.255
+        set remote-ip 10.0.0.1 255.255.255.255
+        set allowaccess ping
+    next
+end
+
+
+# 5. ROUTAGE BGP 
+config router bgp
+    set as 65000
+    set router-id 10.0.0.6
+    config neighbor
+        edit "10.0.0.1"
+            set remote-as 65000
+        next
+    end
+    config network
+        edit 1
+            set prefix 192.168.126.0 255.255.255.0
+        next
+    end
+end
+
+
+# 6. REGLES DE PARE-FEU (POLICIES)
+config firewall policy
+    edit 1
+        set name "LAN_Vers_Internet_NAT"
+        set srcintf "VLAN101_ORDIS" "VLAN102_SRV" "port4"
+        set dstintf "port3"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+        set logtraffic all
+    next
+    edit 2
+        set name "Ordis_Vers_Serveurs"
+        set srcintf "VLAN101_ORDIS"
+        set dstintf "VLAN102_SRV"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+    next
+    edit 3
+        set name "Serveurs_Vers_DMZ"
+        set srcintf "VLAN102_SRV"
+        set dstintf "port4"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+    next
+    edit 4
+        set name "WAN_Vers_DMZ_Apache"
+        set srcintf "port3"
+        set dstintf "port4"
+        set srcaddr "all"
+        set dstaddr "VIP_APACHE_DMZ"
+        set action accept
+        set schedule "always"
+        set service "HTTP"
+        set logtraffic all
+    next
+    edit 5
+        set name "LAN_Vers_VPN"
+        set srcintf "VLAN101_ORDIS" "VLAN102_SRV" "port4"
+        set dstintf "VPN_VERS_HUB"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+    next
+    edit 6
+        set name "VPN_Vers_LAN"
+        set srcintf "VPN_VERS_HUB"
+        set dstintf "VLAN101_ORDIS" "VLAN102_SRV" "port4"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+    next
+end
