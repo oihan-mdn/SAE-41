@@ -5,7 +5,7 @@ Ce dépôt contient l'ensemble des travaux réalisés dans le cadre de la **SAÉ
 
 ---
 
-## 🛡️ Certification & Compétences (CBAR)
+## 🛡️ Certification & Compétences 
 Dans le cadre de cette SAÉ, nous préparons la **Certification Ethical Hacker (CEH) de Cisco Networking Academy**.
 * **Livrables :** Badge CEH et attestation de réussite.
 * **Travaux :** Fiches synthèses des laboratoires et réponses aux labs complétés.
@@ -39,4 +39,4 @@ L'évaluation finale repose sur plusieurs éléments déposés sur la plateforme
 4.  **Soutenance Orale**.
 
 ---
-*Projet encadré par : CBAR, CLAB, NBER, AFAR.*
+*Projet encadré par : CLAB, NBER, AFAR.*
